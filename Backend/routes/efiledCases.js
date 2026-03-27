@@ -48,15 +48,6 @@ router.post('/', protect, validateEFiledCase, async (req, res) => {
       });
     }
 
-    // Check if aadhar number already exists
-    const existingCase = await EFiledCase.findOne({ 'litigant.aadharNumber': req.body.litigant.aadharNumber });
-    if (existingCase) {
-      console.log('Duplicate Aadhar number found:', req.body.litigant.aadharNumber);
-      return res.status(400).json({ 
-        message: 'A case with this Aadhar number already exists' 
-      });
-    }
-
     // Create new case with timeline entry
     const eFiledCase = new EFiledCase({
       litigant: req.body.litigant,

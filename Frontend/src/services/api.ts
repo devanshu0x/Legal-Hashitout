@@ -137,7 +137,7 @@ export const analytics = {
 export const cases = {
   getCases: async () => {
     try {
-      const response = await api.get('/cases');
+      const response = await api.get('/efiled-cases');
       return response.data;
     } catch (error: any) {
       console.error('API getCases error:', error.response || error);
@@ -147,7 +147,7 @@ export const cases = {
 
   createCase: async (caseData: any) => {
     try {
-      const response = await api.post('/cases', caseData);
+      const response = await api.post('/efiled-cases', caseData);
       return response.data;
     } catch (error: any) {
       console.error('API createCase error:', error.response || error);
@@ -157,7 +157,7 @@ export const cases = {
 
   updateCase: async (id: string, caseData: any) => {
     try {
-      const response = await api.put(`/cases/${id}`, caseData);
+      const response = await api.put(`/efiled-cases/${id}`, caseData);
       return response.data;
     } catch (error: any) {
       console.error('API updateCase error:', error.response || error);

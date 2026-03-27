@@ -13,8 +13,7 @@ const eFiledCaseSchema = new mongoose.Schema({
     },
     aadharNumber: {
       type: String,
-      required: true,
-      unique: true
+      required: true
     },
     address: {
       type: String,
