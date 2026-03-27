@@ -127,9 +127,7 @@ router.get('/', protect, async (req, res) => {
     if (status) filter.status = status;
 
     // Role-based filtering
-    if (req.user.role === 'judge') {
-      filter.assignedJudge = req.user._id;
-    } else if (req.user.role === 'lawyer') {
+    if (req.user.role === 'lawyer') {
       filter.assignedLawyer = req.user._id;
     }
 

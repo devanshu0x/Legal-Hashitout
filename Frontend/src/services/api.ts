@@ -145,6 +145,16 @@ export const cases = {
     }
   },
 
+  getCaseById: async (id: string) => {
+    try {
+      const response = await api.get(`/efiled-cases/${id}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('API getCaseById error:', error.response || error);
+      throw error;
+    }
+  },
+
   createCase: async (caseData: any) => {
     try {
       const response = await api.post('/efiled-cases', caseData);

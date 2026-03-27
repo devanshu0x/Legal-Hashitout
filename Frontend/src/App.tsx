@@ -16,10 +16,10 @@ import { ChatPage } from "./pages/ChatPage";
 import Efilling from "./components/EfillingBlocks/Efilling";
 import { FloatingChatButton } from "@/components/FloatingChatButton";
 import MeetingBuilder from "./components/meeting/MeetingBuilder";
-import {LawyerDashboard} from "@/components/dashboard/LawyerDashboard";
-import { JudgeDashboard } from "./components/dashboard/JudgeDashboard";
-import { LitigantDashboard } from "./components/dashboard/LitigantDashboard";
-import { AdminDashboard } from "./components/dashboard/AdminDashboard";
+import {LawyerDashboard} from "@/components/Dashboard/LawyerDashboard";
+import { JudgeDashboard } from "./components/Dashboard/JudgeDashboard";
+import { LitigantDashboard } from "./components/Dashboard/LitigantDashboard";
+import { AdminDashboard } from "./components/Dashboard/AdminDashboard";
 import { Navbar } from "./components/layout/Navbar";
 import { Footer } from "./components/layout/Footer";
 
