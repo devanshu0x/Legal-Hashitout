@@ -1,7 +1,7 @@
 import React from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { Dashboard as DashboardComponent } from "@/components/dashboard/Dashboard";
+import { Dashboard as DashboardComponent } from "@/components/Dashboard/Dashboard";
 import { useAuth } from "@/context/AuthContext";
 import { capitalize } from "@/lib/utils";
 

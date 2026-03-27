@@ -2,7 +2,7 @@
 import React from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { CaseList } from "@/components/dashboard/CaseList";
+import { CaseList } from "@/components/Dashboard/CaseList";
 
 const Cases = () => {
   return (

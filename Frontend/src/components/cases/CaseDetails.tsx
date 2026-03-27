@@ -1,9 +1,8 @@
-import React from "react";
-import { useParams, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   ChevronLeft, 
@@ -22,49 +21,72 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-
-// Mock case data
-const cases = [
-  {
-    id: "1",
-    title: "Smith v. Johnson",
-    caseNumber: "2023-001",
-    status: "Active",
-    date: "2023-05-12",
-    type: "Civil",
-    description: "Dispute over property boundaries between neighboring landowners.",
-    judge: "Judge Robert Williams",
-    plaintiffs: ["James Smith"],
-    defendants: ["Sarah Johnson"],
-    attorneys: ["Michael Davis (Plaintiff)", "Jennifer Wilson (Defendant)"],
-    hearings: [
-      { id: "h1", title: "Initial Hearing", date: "2023-06-15", time: "10:00 AM", location: "Virtual Courtroom A" },
-      { id: "h2", title: "Evidence Review", date: "2023-07-20", time: "2:30 PM", location: "Virtual Courtroom B" }
-    ],
-    documents: [
-      { id: "d1", title: "Complaint", date: "2023-05-12", author: "Michael Davis", type: "Legal Filing" },
-      { id: "d2", title: "Response", date: "2023-05-25", author: "Jennifer Wilson", type: "Legal Filing" },
-      { id: "d3", title: "Property Survey", date: "2023-06-01", author: "Expert Witness", type: "Evidence" }
-    ],
-    timeline: [
-      { id: "t1", event: "Case Filed", date: "2023-05-12" },
-      { id: "t2", event: "Response Filed", date: "2023-05-25" },
-      { id: "t3", event: "Initial Hearing Scheduled", date: "2023-06-01" }
-    ]
-  },
-  // Other cases would be defined here
-];
+import { cases } from "@/services/api";
 
 export function CaseDetails() {
   const { id } = useParams<{ id: string }>();
-  const caseData = cases.find((c) => c.id === id);
   const navigate = useNavigate();
+  const [caseData, setCaseData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!caseData) {
+  useEffect(() => {
+    const fetchCaseDetails = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const data = await cases.getCaseById(id);
+        
+        // Map backend data to frontend format
+        const mappedCase = {
+          id: data._id,
+          title: data.case?.subject || data.litigant?.name || "Unknown Case",
+          caseNumber: data.caseNumber || "Pending",
+          status: data.status ? data.status.charAt(0).toUpperCase() + data.status.slice(1) : "Pending",
+          date: data.filingDate || data.createdAt || new Date().toISOString(),
+          type: data.case?.caseType || "Unknown",
+          description: data.case?.causeOfAction || "No description available.",
+          judge: data.assignedJudge?.fullName || "Unassigned",
+          plaintiffs: [data.litigant?.name].filter(Boolean),
+          defendants: [data.case?.causeAgainstWhom].filter(Boolean),
+          attorneys: [data.assignedLawyer?.fullName].filter(Boolean),
+          hearings: [], // Meetings could be mapped here if available
+          documents: (data.documents || []).map((doc: any) => ({
+            id: doc._id,
+            title: doc.title,
+            date: doc.uploadedAt,
+            author: doc.uploadedBy?.fullName || "Unknown",
+            type: "Document"
+          })),
+          timeline: (data.timeline || []).map((item: any, index: number) => ({
+            id: item._id || `t${index}`,
+            event: item.action,
+            date: item.date
+          }))
+        };
+        
+        setCaseData(mappedCase);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch case details:", err);
+        setError("Failed to load case details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCaseDetails();
+  }, [id]);
+
+  if (loading) {
+    return <div className="text-center py-12 text-muted-foreground">Loading case details...</div>;
+  }
+
+  if (error || !caseData) {
     return (
       <div className="text-center py-12">
         <h2 className="text-xl font-semibold">Case not found</h2>
-        <p className="text-muted-foreground mt-2">The case you're looking for doesn't exist or has been moved.</p>
+        <p className="text-muted-foreground mt-2">{error || "The case you're looking for doesn't exist or has been moved."}</p>
         <Button asChild className="mt-4">
           <Link to="/cases">Back to Cases</Link>
         </Button>
@@ -73,14 +95,17 @@ export function CaseDetails() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
+    switch (status.toLowerCase()) {
+      case "active":
+      case "approved":
         return "bg-green-500/10 text-green-600 border-green-200";
-      case "Pending":
+      case "pending":
+      case "processing":
         return "bg-yellow-500/10 text-yellow-600 border-yellow-200";
-      case "Closed":
+      case "closed":
+      case "rejected":
         return "bg-gray-500/10 text-gray-600 border-gray-200";
-      case "Archived":
+      case "archived":
         return "bg-red-500/10 text-red-600 border-red-200";
       default:
         return "bg-gray-500/10 text-gray-600 border-gray-200";
@@ -133,17 +158,17 @@ export function CaseDetails() {
               
               <div className="space-y-2">
                 <p className="text-sm font-medium">Plaintiff(s)</p>
-                <p className="text-sm text-muted-foreground">{caseData.plaintiffs.join(", ")}</p>
+                <p className="text-sm text-muted-foreground">{caseData.plaintiffs.length > 0 ? caseData.plaintiffs.join(", ") : "N/A"}</p>
               </div>
               
               <div className="space-y-2">
                 <p className="text-sm font-medium">Defendant(s)</p>
-                <p className="text-sm text-muted-foreground">{caseData.defendants.join(", ")}</p>
+                <p className="text-sm text-muted-foreground">{caseData.defendants.length > 0 ? caseData.defendants.join(", ") : "N/A"}</p>
               </div>
               
               <div className="space-y-2 md:col-span-2">
                 <p className="text-sm font-medium">Attorneys</p>
-                <p className="text-sm text-muted-foreground">{caseData.attorneys.join(", ")}</p>
+                <p className="text-sm text-muted-foreground">{caseData.attorneys.length > 0 ? caseData.attorneys.join(", ") : "N/A"}</p>
               </div>
             </div>
           </div>
@@ -158,37 +183,41 @@ export function CaseDetails() {
         </TabsList>
         
         <TabsContent value="hearings" className="space-y-4 mt-6">
-          {caseData.hearings.map((hearing) => (
-            <Card key={hearing.id} className="hover-card">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{hearing.title}</CardTitle>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    Upcoming
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{new Date(hearing.date).toLocaleDateString()}</span>
+          {caseData.hearings.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No hearings scheduled yet.</div>
+          ) : (
+            caseData.hearings.map((hearing: any) => (
+              <Card key={hearing.id} className="hover-card">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{hearing.title}</CardTitle>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                      Upcoming
+                    </Badge>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{hearing.time}</span>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{new Date(hearing.date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{hearing.time}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Video className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{hearing.location}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Video className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{hearing.location}</span>
+                  <div className="mt-4 flex justify-end">
+                    <Button size="sm">Join Hearing</Button>
                   </div>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <Button size="sm">Join Hearing</Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </TabsContent>
         
         <TabsContent value="documents" className="mt-6">
@@ -204,17 +233,25 @@ export function CaseDetails() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {caseData.documents.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">{doc.title}</TableCell>
-                    <TableCell>{doc.type}</TableCell>
-                    <TableCell>{new Date(doc.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{doc.author}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">View</Button>
+                {caseData.documents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No documents available.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  caseData.documents.map((doc: any) => (
+                    <TableRow key={doc.id}>
+                      <TableCell className="font-medium">{doc.title}</TableCell>
+                      <TableCell>{doc.type}</TableCell>
+                      <TableCell>{new Date(doc.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{doc.author}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm">View</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -222,19 +259,23 @@ export function CaseDetails() {
         
         <TabsContent value="timeline" className="space-y-4 mt-6">
           <div className="border-l-2 border-muted pl-6 space-y-6 ml-4">
-            {caseData.timeline.map((item, index) => (
-              <div key={item.id} className="relative">
-                <div className="absolute -left-[30px] h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                  <div className="h-2 w-2 rounded-full bg-white"></div>
+            {caseData.timeline.length === 0 ? (
+               <div className="text-muted-foreground py-4">No timeline events recorded.</div>
+            ) : (
+              caseData.timeline.map((item: any) => (
+                <div key={item.id} className="relative">
+                  <div className="absolute -left-[30px] h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                    <div className="h-2 w-2 rounded-full bg-white"></div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{item.event}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(item.date).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{item.event}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(item.date).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </TabsContent>
       </Tabs>
