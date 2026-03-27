@@ -34,6 +34,7 @@ export function CaseDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchCaseDetails = async () => {
@@ -83,27 +84,51 @@ export function CaseDetails() {
     fetchCaseDetails();
   }, [id]);
 
-  const handleUploadDocument = async () => {
-    if (!id) return;
-    const title = prompt("Enter document title:");
-    if (!title) return;
-    
-    // In a real app, this would be a file upload. 
-    // For now, we'll mock a file URL.
-    const fileUrl = `https://example.com/docs/${encodeURIComponent(title)}.pdf`;
-    
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !id) return;
+
     try {
       setIsUploading(true);
-      await cases.addDocument(id, { title, fileUrl });
+      
+      // Simulated upload progress toast
+      toast.info(`Uploading ${file.name}...`);
+      
+      // In a real production app, you would use FormData to upload the file to S3/Cloudinary
+      // For this hackathon demo, we'll store the filename as the title and a mock URL
+      const fileUrl = `https://legal-ease-storage.s3.amazonaws.com/uploads/${id}/${encodeURIComponent(file.name)}`;
+      
+      await cases.addDocument(id, { 
+        title: file.name, 
+        fileUrl 
+      });
+
       toast.success("Document uploaded successfully");
-      // Refresh data
-      window.location.reload();
+      
+      // Refresh case details to show the new document
+      const updatedData = await cases.getCaseById(id);
+      // Map again (could refactor this to a function)
+      setCaseData({
+        ...caseData,
+        documents: (updatedData.documents || []).map((doc: any) => ({
+          id: doc._id,
+          title: doc.title,
+          date: doc.uploadedAt,
+          author: doc.uploadedBy?.fullName || "Unknown",
+          type: "Document"
+        }))
+      });
     } catch (err) {
       console.error("Upload failed:", err);
       toast.error("Failed to upload document");
     } finally {
       setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = ""; // Reset input
     }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   if (loading) {
@@ -156,14 +181,23 @@ export function CaseDetails() {
         </div>
         <div className="flex items-center space-x-2">
           {user?.role === 'lawyer' && (
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={handleUploadDocument}
-              disabled={isUploading}
-            >
-              <FileText className="h-4 w-4" /> {isUploading ? "Uploading..." : "Upload Proof"}
-            </Button>
+            <>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+                accept=".pdf,.doc,.docx,.jpg,.png"
+              />
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={handleUploadClick}
+                disabled={isUploading}
+              >
+                <FileText className="h-4 w-4" /> {isUploading ? "Uploading..." : "Upload Proof"}
+              </Button>
+            </>
           )}
           {user?.role === 'judge' && (
             <Button onClick={() => navigate('/meeting')} className="flex items-center gap-2">
